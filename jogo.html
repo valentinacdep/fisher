@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Jogo de Pesca</title>
+    <style>
+        @keyframes magia {
+            0% {
+                opacity: 0;
+                transform: scale(0.5) rotate(0deg);
+                filter: brightness(2);
+            }
+
+            50% {
+                opacity: 1;
+                transform: scale(1.2) rotate(180deg);
+                filter: brightness(4) drop-shadow(0 0 15px #00ffff);
+            }
+
+            100% {
+                opacity: 0;
+                transform: scale(0.5) rotate(360deg);
+                filter: brightness(1);
+            }
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-image: url('https://images.unsplash.com/photo-1507525428034-b723cf961d3e');
+            background-size: cover;
+            background-position: center;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: #fff;
+            text-shadow: 1px 1px 3px #000;
+            overflow: hidden;
+        }
+
+        .container {
+            display: flex;
+            flex-direction: row;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+        }
+
+        .jogo {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-right: 50px;
+            background-color: rgba(255, 255, 255, 0.5);
+            padding: 20px;
+            border-radius: 15px;
+        }
+
+        h1 {
+            font-size: 3rem;
+            margin-bottom: 30px;
+            font-family: 'Pacifico', cursive;
+            color: #ffffff;
+        }
+
+        button {
+            font-size: 1.5rem;
+            padding: 15px 30px;
+            background-color: #00aaff;
+            border: none;
+            border-radius: 12px;
+            color: white;
+            cursor: pointer;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+            transition: background-color 0.3s ease;
+            margin-bottom: 20px;
+        }
+
+        button:hover {
+            background-color: #0077aa;
+        }
+
+        #resultado {
+            font-size: 1.8rem;
+            margin-top: 30px;
+            background-color: transparent;
+            padding: 20px;
+            border-radius: 15px;
+            color: #ffffff;
+        }
+
+        #imagem-peixe,
+        #anzol {
+            margin-top: 20px;
+            height: 200px;
+            filter: drop-shadow(0 0 5px #000);
+        }
+
+        #anzol {
+            position: absolute;
+            top: 40%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 10;
+            display: none;
+        }
+
+        .animar-anzol {
+            display: block !important;
+            animation: magia 2s ease-in-out;
+        }
+
+        #lista-peixes {
+            margin-top: 30px;
+            font-size: 1.2rem;
+            text-align: center;
+        }
+
+        #lista-peixes ul {
+            list-style-type: none;
+            padding: 0;
+        }
+
+        #lista-peixes li {
+            margin: 10px 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: rgba(255, 255, 255, 0.551);
+            padding: 10px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.7);
+        }
+
+        #lista-peixes img {
+            margin-right: 10px;
+            width: 50px;
+            height: 50px;
+        }
+
+        #inventario {
+            margin-left: 50px;
+            font-size: 1.2rem;
+            text-align: center;
+        }
+
+        #inventario ul {
+            list-style-type: none;
+            padding: 0;
+        }
+
+        #inventario li {
+            margin: 10px 0;
+            background-color: rgba(255, 255, 255, 0.551);
+            padding: 10px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.7);
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="jogo">
+            <h1>Fisher</h1>
+            <button onclick="pescar()">Lançar Anzol</button>
+            <button onclick="toggleMusica()" id="btnMusica">🔊 Música: Ligada</button>
+            <img id="anzol" src="imagens/anzol.png" alt="Anzol">
+            <div id="resultado"></div>
+            <img id="imagem-peixe" src="" alt="" style="display:none;">
+            <div id="pontuacao">Pontos: 0</div>
+            <div id="tempo">Tempo: 30</div>
+        </div>
+
+        <div id="lista-peixes">
+            <h2>Peixes Disponíveis</h2>
+            <ul></ul>
+        </div>
+
+        <!-- Inventário -->
+        <div id="inventario">
+            <h2>Inventário</h2>
+            <ul id="lista-inventario"></ul>
+        </div>
+    </div>
+
+    <script>
+        const peixes = [
+            { nome: "Lambari", chance: 50, valor: 5000, imagem: "imagens/lambari.png" },
+            { nome: "Tilápia", chance: 30, valor: 7500, imagem: "imagens/tilapia.png" },
+            { nome: "Dourado", chance: 15, valor: 8000, imagem: "imagens/dourado.png" },
+            { nome: "Piranha", chance: 6, valor: 8500, imagem: "imagens/piranha.png" },
+            { nome: "Peixe Lendário", chance: 1, valor: 100000, imagem: "imagens/peixe lendario.png" }
+        ];
+
+        let pontos = 0;
+        let tempoRestante = 30;
+        let intervaloTempo;
+        let inventario = {};
+
+        function atualizarPontuacao() {
+            document.getElementById('pontuacao').textContent = `Pontos: ${pontos}`;
+        }
+
+        function atualizarTempo() {
+            document.getElementById('tempo').textContent = `Tempo: ${tempoRestante}`;
+        }
+
+        function atualizarInventario() {
+            const lista = document.getElementById("lista-inventario");
+            lista.innerHTML = '';
+
+            for (const nome in inventario) {
+                const quantidade = inventario[nome];
+                const item = document.createElement('li');
+                item.textContent = `${nome}: ${quantidade}`;
+                lista.appendChild(item);
+            }
+        }
+
+        function iniciarTemporizador() {
+            intervaloTempo = setInterval(() => {
+                tempoRestante--;
+                atualizarTempo();
+                if (tempoRestante <= 0) {
+                    clearInterval(intervaloTempo);
+                    alert("O tempo acabou! Seus pontos finais são: " + pontos);
+                }
+            }, 1000);
+        }
+
+        function gerarListaPeixes() {
+            const listaPeixesElement = document.getElementById('lista-peixes').querySelector('ul');
+            listaPeixesElement.innerHTML = ''; // Limpar lista atual
+
+            peixes.forEach(peixe => {
+                const itemPeixe = document.createElement('li');
+                itemPeixe.innerHTML = `
+                    <img src="${peixe.imagem}" alt="${peixe.nome}">
+                    <span>${peixe.nome} - R$ ${peixe.valor.toLocaleString('pt-BR')}</span>
+                `;
+                listaPeixesElement.appendChild(itemPeixe);
+            });
+        }
+
+        function pescar() {
+            if (tempoRestante <= 0) return;
+
+            const anzol = document.getElementById('anzol');
+            const peixeImg = document.getElementById('imagem-peixe');
+            const resultado = document.getElementById('resultado');
+
+            peixeImg.style.display = 'none';
+            resultado.textContent = '';
+            anzol.classList.remove('animar-anzol');
+            void anzol.offsetWidth;
+            anzol.classList.add('animar-anzol');
+
+            if (!intervaloTempo) {
+                iniciarTemporizador();
+            }
+
+            setTimeout(() => {
+                anzol.classList.remove('animar-anzol');
+                anzol.style.display = 'none';
+
+                const total = peixes.reduce((acc, p) => acc + p.chance, 0);
+                let sorteio = Math.floor(Math.random() * total);
+                let acumulado = 0;
+
+                for (const peixe of peixes) {
+                    acumulado += peixe.chance;
+                    if (sorteio < acumulado) {
+                        resultado.textContent = `Você pescou um: ${peixe.nome}! Valor: R$ ${peixe.valor.toLocaleString('pt-BR')}`;
+                        peixeImg.src = peixe.imagem;
+                        peixeImg.alt = peixe.nome;
+                        peixeImg.style.display = 'block';
+
+                        pontos += peixe.valor;
+                        atualizarPontuacao();
+
+                        if (inventario[peixe.nome]) {
+                            inventario[peixe.nome]++;
+                        } else {
+                            inventario[peixe.nome] = 1;
+                        }
+                        atualizarInventario();
+                        return;
+                    }
+                }
+            }, 2000);
+        }
+
+        gerarListaPeixes();
+
+        function toggleMusica() {
+            const musica = document.getElementById("musicaFundo");
+            const btn = document.getElementById("btnMusica");
+
+            if (musica.paused) {
+                musica.play();
+                btn.textContent = "🔊 Música: Ligada";
+            } else {
+                musica.pause();
+                btn.textContent = "🔇 Música: Desligada";
+            }
+        }
+    </script>
+
+    <audio id="musicaFundo" autoplay loop>
+        <source src="https://www.bensound.com/bensound-music/bensound-tenderness.mp3" type="audio/mpeg">
+        Seu navegador não suporta áudio HTML5.
+    </audio>
+
+</body>
+
+</html>
